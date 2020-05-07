@@ -1,0 +1,152 @@
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.InputStreamReader;
+import java.io.IOException;
+import com.sforce.soap.enterprise.DeleteResult;
+import com.sforce.soap.enterprise.DescribeGlobalResult;
+import com.sforce.soap.enterprise.DescribeGlobalSObjectResult;
+import com.sforce.soap.enterprise.DescribeSObjectResult;
+import com.sforce.soap.enterprise.EnterpriseConnection;
+import com.sforce.soap.enterprise.Error;
+import com.sforce.soap.enterprise.Field;
+import com.sforce.soap.enterprise.FieldType;
+import com.sforce.soap.enterprise.GetUserInfoResult;
+import com.sforce.soap.enterprise.LoginResult;
+import com.sforce.soap.enterprise.PicklistEntry;
+import com.sforce.soap.enterprise.QueryResult;
+import com.sforce.soap.enterprise.SaveResult;
+import com.sforce.soap.enterprise.sobject.Account;
+import com.sforce.soap.enterprise.sobject.Contact;
+import com.sforce.soap.enterprise.sobject.SObject;
+import com.sforce.ws.ConnectorConfig;
+import com.sforce.ws.ConnectionException;
+
+public class Main {
+	
+	private static BufferedReader reader = new BufferedReader(
+	         new InputStreamReader(System.in));
+
+	   EnterpriseConnection connection;
+	   String authEndPoint = "https://login.salesforce.com/services/Soap/c/48.0/";
+	   
+	// Constructor
+	   public Main() {
+	      this.authEndPoint = authEndPoint;
+	   }
+
+	   public static void main(String[] args) {
+	      
+
+	      Main sample = new Main();
+	      sample.run();
+	   }
+
+	   public void run() {
+	      // Make a login call
+	      if (login()) {
+	    	  
+	    	// Retrieve some data using a query
+	    	  querySample();
+	    	  
+	    	// Log out
+	          logout();
+	         
+	      }
+	   }
+	   
+	   private boolean login() {
+		      boolean success = false;
+		      String username = "johnson.titus12@gmail.com";
+		      String password = "pogo123pogoigGjGghJxQTsz7hH3fwgdABa";
+
+		      try {
+		         ConnectorConfig config = new ConnectorConfig();
+		         config.setUsername(username);
+		         config.setPassword(password);
+
+		         System.out.println("AuthEndPoint: " + authEndPoint);
+		         config.setAuthEndpoint(authEndPoint);
+
+		         connection = new EnterpriseConnection(config);
+		         printUserInfo(config);
+
+		         success = true;
+		      } catch (ConnectionException ce) {
+		         ce.printStackTrace();
+		      } 
+
+		      return success;
+	   }
+	   
+	   private void printUserInfo(ConnectorConfig config) {
+		      try {
+		         GetUserInfoResult userInfo = connection.getUserInfo();
+
+		         System.out.println("\nLogging in ...\n");
+		         System.out.println("UserID: " + userInfo.getUserId());
+		         System.out.println("User Full Name: " + userInfo.getUserFullName());
+		         System.out.println("User Email: " + userInfo.getUserEmail());
+		         System.out.println();
+		         System.out.println("SessionID: " + config.getSessionId());
+		         System.out.println("Auth End Point: " + config.getAuthEndpoint());
+		         System.out
+		               .println("Service End Point: " + config.getServiceEndpoint());
+		         System.out.println();
+		      } catch (ConnectionException ce) {
+		         ce.printStackTrace();
+		      }
+	   }
+	   
+	   private void querySample() {
+		   String soqlQuery = "SELECT FirstName, LastName FROM Contact LIMIT 10";
+		   try {
+		         QueryResult qr = connection.query(soqlQuery);
+		         boolean done = false;
+
+		         if (qr.getSize() > 0) {
+		            System.out.println("\nLogged-in user can see "
+		                  + qr.getRecords().length + " contact records.");
+
+		            while (!done) {
+		               System.out.println("");
+		               SObject[] records = qr.getRecords();
+		               for (int i = 0; i < records.length; ++i) {
+		                  Contact con = (Contact) records[i];
+		                  String fName = con.getFirstName();
+		                  String lName = con.getLastName();
+
+		                  if (fName == null) {
+		                     System.out.println("Contact " + (i + 1) + ": " + lName);
+		                  } else {
+		                     System.out.println("Contact " + (i + 1) + ": " + fName
+		                           + " " + lName);
+		                  }
+		               }
+
+		               if (qr.isDone()) {
+		                  done = true;
+		               } else {
+		                  qr = connection.queryMore(qr.getQueryLocator());
+		               }
+		            }
+		         } else {
+		            System.out.println("No records found.");
+		         }
+		      } catch (ConnectionException ce) {
+		         ce.printStackTrace();
+		      }
+		   }
+		   
+	   
+	   private void logout() {
+		      try {
+		         connection.logout();
+		         System.out.println("Logged out.");
+		      } catch (ConnectionException ce) {
+		         ce.printStackTrace();
+		      }
+	   }
+	   
+}
+
+
